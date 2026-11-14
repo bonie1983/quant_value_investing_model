@@ -1,0 +1,11 @@
+# --- Credenciales ---
+.env
+
+# --- Base de datos y Caché de datos ---
+database/
+data_cache/
+
+# --- Sistema y Python ---
+.DS_Store
+__pycache__/
+.vscode/
