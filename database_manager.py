@@ -15,6 +15,7 @@ import sqlite3
 import hashlib
 
 from datetime import datetime, timezone
+from contextlib import contextmanager
 
 from dic_companies import EMPRESAS_DOWJONES
 
@@ -40,13 +41,33 @@ os.makedirs(DATABASE_DIR, exist_ok=True)
 # CONEXION
 # ============================================================
 
+
+@contextmanager
 def obtener_conexion():
+
+    """
+    Abre una conexión con nuestra base de datos SQLite.
+    Activa las claves foráneas y cierra la conexión
+    al finalizar.
+    """
 
     conexion = sqlite3.connect(DATABASE_FILE)
 
-    conexion.execute("PRAGMA foreign_keys = ON")
+    try:
+        conexion.execute("PRAGMA foreign_keys = ON")
+        conexion.row_factory = sqlite3.Row
 
-    return conexion
+        yield conexion
+
+        conexion.commit()
+
+    except Exception:
+        conexion.rollback()
+        raise
+
+    finally:
+        conexion.close()
+
 
 
 # ============================================================

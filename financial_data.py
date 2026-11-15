@@ -1,46 +1,7 @@
 
-import os
-import sqlite3
+from database_manager import obtener_conexion
 from datetime import datetime
 from dic_financial_terms import CONCEPTOS_FINANCIEROS
-
-
-# ==========================================================
-# 1. CONFIGURACIÓN
-# ==========================================================
-
-# Directorio principal del proyecto
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-
-# Ruta de nuestra base de datos
-DATABASE_PATH = os.path.join(
-    BASE_DIR,
-    "database",
-    "quantitative_value.db"
-)
-
-
-# ==========================================================
-# 2. CONEXIÓN CON SQLITE
-# ==========================================================
-
-def obtener_conexion():
-
-    """
-    Abre una conexión con nuestra base de datos SQLite.
-    """
-
-    if not os.path.exists(DATABASE_PATH):
-        raise FileNotFoundError(
-            f"No se encuentra la base de datos: {DATABASE_PATH}"
-        )
-
-    conexion = sqlite3.connect(DATABASE_PATH)
-
-    # Permite acceder a las columnas por su nombre
-    conexion.row_factory = sqlite3.Row
-
-    return conexion
 
 
 # ==========================================================
