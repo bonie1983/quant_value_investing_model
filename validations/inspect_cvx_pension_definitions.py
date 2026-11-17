@@ -1,34 +1,79 @@
 
 from database_manager import obtener_conexion
 
-conceptos = [
+
+# ==========================================================
+# CONFIGURACIÓN
+# ==========================================================
+
+CONCEPTOS_PENSION = [
     "PensionExpense",
     "NetPeriodicDefinedBenefitsExpenseReversalOfExpenseExcludingServiceCostComponent",
     "DefinedBenefitPlanRecognizedNetGainLossDueToSettlementsAndCurtailments1"
 ]
 
-with obtener_conexion() as conexion:
 
-    for concepto in conceptos:
+# ==========================================================
+# INSPECCIONAR DEFINICIONES DE CONCEPTOS
+# ==========================================================
 
-        print("\n" + "=" * 100)
-        print(concepto)
-        print("=" * 100)
+def inspeccionar_definiciones_pensiones():
 
-        resultado = conexion.execute(
+    """
+    Consulta las definiciones contables de conceptos relacionados
+    con pensiones almacenadas en fact_definitions.
+
+    Muestra:
+    - Taxonomía.
+    - Concepto.
+    - Etiqueta.
+    - Descripción.
+    """
+
+    with obtener_conexion() as conexion:
+
+        for concepto in CONCEPTOS_PENSION:
+
+            print("\n" + "=" * 100)
+            print(f"CONCEPTO: {concepto}")
+            print("=" * 100)
+
+            consulta = """
+                SELECT
+                    taxonomy,
+                    concept,
+                    label,
+                    description
+
+                FROM fact_definitions
+
+                WHERE concept = ?
+
+                ORDER BY taxonomy
             """
-            SELECT taxonomy, concept, label, description
-            FROM fact_definitions
-            WHERE concept = ?
-            """,
-            (concepto,)
-        ).fetchall()
 
-        if not resultado:
-            print("Definición no encontrada.")
-            continue
+            resultado = conexion.execute(
+                consulta,
+                (concepto,)
+            ).fetchall()
 
-        for fila in resultado:
-            print("Taxonomía:", fila["taxonomy"])
-            print("Etiqueta:", fila["label"])
-            print("Descripción:", fila["description"])
+            if not resultado:
+
+                print("Definición no encontrada.")
+                continue
+
+            for fila in resultado:
+
+                print("Taxonomía:", fila["taxonomy"])
+                print("Concepto:", fila["concept"])
+                print("Etiqueta:", fila["label"])
+                print("Descripción:", fila["description"])
+
+
+# ==========================================================
+# EJECUCIÓN
+# ==========================================================
+
+if __name__ == "__main__":
+
+    inspeccionar_definiciones_pensiones()

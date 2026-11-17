@@ -1,12 +1,17 @@
 
 from datetime import datetime
 
-from financial_data import (
-    obtener_dato_anual,
+from exploration.financial_data_queries import (
+    obtener_dato_anual
+)
+
+from financial_terms.revenue import (
     obtener_ingresos
 )
 
-from dic_financial_terms import CONCEPTOS_FINANCIEROS
+from financial_terms.dic_financial_terms import (
+    CONCEPTOS_FINANCIEROS
+)
 
 
 # ==========================================================
@@ -18,17 +23,47 @@ FECHA_CORTE = "2026-11-15"
 CONCEPTO = "OperatingIncomeLoss"
 
 TICKERS = sorted(
-    CONCEPTOS_FINANCIEROS["revenue"].keys()
+    CONCEPTOS_FINANCIEROS.get("revenue", {}).keys()
 )
 
 
 # ==========================================================
-# 2. IDENTIFICAR EL ÚLTIMO EJERCICIO DISPONIBLE
+# 2. VALIDAR FECHA DE CORTE
+# ==========================================================
+
+def validar_fecha_corte(fecha_corte):
+
+    """
+    Comprueba que la fecha de corte tenga formato YYYY-MM-DD.
+    """
+
+    try:
+        fecha = datetime.strptime(fecha_corte, "%Y-%m-%d")
+
+    except (TypeError, ValueError):
+        raise ValueError(
+            "La fecha de corte debe tener el formato YYYY-MM-DD."
+        )
+
+    return fecha
+
+
+# ==========================================================
+# 3. IDENTIFICAR EL ÚLTIMO EJERCICIO DISPONIBLE
 # ==========================================================
 
 def obtener_ultimo_ejercicio(ticker):
 
-    anio_maximo = int(FECHA_CORTE[:4])
+    """
+    Identifica el último ejercicio con ingresos anuales disponibles.
+
+    Utilizamos Revenue para determinar el ejercicio de referencia
+    y posteriormente comprobar Operating Income para ese ejercicio.
+    """
+
+    fecha = validar_fecha_corte(FECHA_CORTE)
+
+    anio_maximo = fecha.year
 
     for ejercicio in range(anio_maximo, 1999, -1):
 
@@ -45,10 +80,12 @@ def obtener_ultimo_ejercicio(ticker):
 
 
 # ==========================================================
-# 3. VALIDAR OPERATING INCOME
+# 4. VALIDAR OPERATING INCOME
 # ==========================================================
 
 def validar_operating_income():
+
+    fecha = validar_fecha_corte(FECHA_CORTE)
 
     correctas = 0
     sin_datos = 0
@@ -71,8 +108,13 @@ def validar_operating_income():
             ejercicio = obtener_ultimo_ejercicio(ticker)
 
             if ejercicio is None:
+
                 sin_datos += 1
-                print(f"{ticker:8} | Sin ingresos anuales disponibles")
+
+                print(
+                    f"{ticker:8} | Sin ingresos anuales disponibles"
+                )
+
                 continue
 
             resultado = obtener_dato_anual(
@@ -107,8 +149,13 @@ def validar_operating_income():
             errores += 1
 
             print(
-                f"{ticker:8} | ERROR | {error}"
+                f"{ticker:8} | ERROR | "
+                f"{type(error).__name__}: {error}"
             )
+
+    # ======================================================
+    # RESUMEN DE VALIDACIÓN
+    # ======================================================
 
     print("\n" + "=" * 90)
     print("RESUMEN DE VALIDACIÓN")
@@ -121,8 +168,9 @@ def validar_operating_income():
 
 
 # ==========================================================
-# 4. EJECUCIÓN
+# 5. EJECUCIÓN
 # ==========================================================
 
 if __name__ == "__main__":
+
     validar_operating_income()

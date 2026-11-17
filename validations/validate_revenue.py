@@ -1,36 +1,70 @@
-from dic_financial_terms import CONCEPTOS_FINANCIEROS
-from financial_data import (
-    listar_empresas,
-    obtener_ingresos
+
+from datetime import datetime
+
+from financial_terms.dic_financial_terms import (
+    CONCEPTOS_FINANCIEROS
 )
 
-## ==========================================================
-#  VALIDAR INGRESOS DE TODAS LAS EMPRESAS
-## ==========================================================
+from financial_terms.revenue import obtener_ingresos
+
+from exploration.financial_data_queries import (
+    listar_empresas
+)
+
+
+# ==========================================================
+# VALIDAR INGRESOS DE TODAS LAS EMPRESAS
+# ==========================================================
 
 def validar_ingresos_todas_empresas(
     fecha_corte="2026-11-15",
     ejercicio_minimo=1990
 ):
+
     """
     Valida los ingresos de todas las empresas de la base de datos.
 
     Busca el último ejercicio anual disponible para cada empresa,
     respetando la fecha de corte.
+
+    Estados posibles:
+    - OK: ingresos encontrados.
+    - SIN_CONFIGURAR: empresa sin conceptos configurados.
+    - SIN_DATOS: no se encontraron datos anuales.
+    - ERROR: se produjo un error durante la consulta.
     """
 
-    empresas_configuradas = CONCEPTOS_FINANCIEROS["revenue"]
+    # ------------------------------------------------------
+    # VALIDAR PARÁMETROS
+    # ------------------------------------------------------
 
-    empresas = [
-    empresa
-    for empresa in listar_empresas()
-    if empresa["ticker"] in empresas_configuradas
-]
+    try:
+        fecha = datetime.strptime(fecha_corte, "%Y-%m-%d")
+
+    except (TypeError, ValueError):
+        raise ValueError(
+            "La fecha de corte debe tener el formato YYYY-MM-DD."
+        )
+
+    if (
+        not isinstance(ejercicio_minimo, int)
+        or isinstance(ejercicio_minimo, bool)
+        or ejercicio_minimo < 1900
+        or ejercicio_minimo > fecha.year
+    ):
+        raise ValueError("El ejercicio mínimo no es válido.")
+
+    empresas_configuradas = CONCEPTOS_FINANCIEROS.get(
+        "revenue", {}
+    )
+
+    # Recuperamos todas las empresas, incluidas las que
+    # todavía no tienen conceptos configurados.
+    empresas = listar_empresas()
 
     resultados = []
 
-    # El último año que buscamos es el año de la fecha de corte.
-    ultimo_ejercicio = int(fecha_corte[:4])
+    ultimo_ejercicio = fecha.year
 
     print("\n" + "=" * 90)
     print("VALIDACIÓN GENERAL DE INGRESOS")
@@ -38,16 +72,38 @@ def validar_ingresos_todas_empresas(
     print(f"Empresas encontradas: {len(empresas)}")
     print("=" * 90)
 
+    # ------------------------------------------------------
+    # PROCESAR EMPRESAS
+    # ------------------------------------------------------
+
     for empresa in empresas:
 
         ticker = empresa["ticker"]
 
         resultado_encontrado = None
-        estado = "SIN_DATOS"
         ejercicio_encontrado = None
+        estado = "SIN_DATOS"
         error = None
 
-        # Buscamos desde el ejercicio más reciente hacia atrás.
+        # Comprobar si la empresa tiene conceptos configurados.
+        if ticker not in empresas_configuradas:
+
+            resultados.append({
+                "ticker": ticker,
+                "ejercicio": None,
+                "ingresos": None,
+                "concepto": None,
+                "periodo_inicio": None,
+                "periodo_fin": None,
+                "fecha_publicacion": None,
+                "formulario": None,
+                "estado": "SIN_CONFIGURAR",
+                "error": None
+            })
+
+            continue
+
+        # Buscar desde el ejercicio más reciente hacia atrás.
         for ejercicio in range(
             ultimo_ejercicio,
             ejercicio_minimo - 1,
@@ -55,6 +111,7 @@ def validar_ingresos_todas_empresas(
         ):
 
             try:
+
                 resultado = obtener_ingresos(
                     ticker=ticker,
                     ejercicio=ejercicio,
@@ -62,24 +119,24 @@ def validar_ingresos_todas_empresas(
                 )
 
                 if resultado is not None:
+
                     resultado_encontrado = resultado
                     ejercicio_encontrado = ejercicio
                     estado = "OK"
+
                     break
-
-            except ValueError as e:
-
-                # Empresa sin conceptos configurados.
-                error = str(e)
-                estado = "SIN_CONFIGURAR"
-                break
 
             except Exception as e:
 
-                # Guardamos cualquier otro error para revisarlo.
-                error = str(e)
+                # Registramos el error para poder investigarlo.
+                error = f"{type(e).__name__}: {e}"
                 estado = "ERROR"
+
                 break
+
+        # --------------------------------------------------
+        # GUARDAR RESULTADOS
+        # --------------------------------------------------
 
         if resultado_encontrado is not None:
 
@@ -111,7 +168,10 @@ def validar_ingresos_todas_empresas(
                 "error": error
             })
 
-    # Mostrar resultados.
+    # ======================================================
+    # MOSTRAR RESULTADOS
+    # ======================================================
+
     print("\nRESULTADOS POR EMPRESA")
     print("-" * 90)
 
@@ -124,7 +184,13 @@ def validar_ingresos_todas_empresas(
             f"{resultado['estado']}"
         )
 
-    # Resumen de estados.
+        if resultado["error"] is not None:
+            print(f"  Error: {resultado['error']}")
+
+    # ======================================================
+    # RESUMEN DE VALIDACIÓN
+    # ======================================================
+
     total_ok = sum(
         r["estado"] == "OK" for r in resultados
     )
@@ -153,9 +219,10 @@ def validar_ingresos_todas_empresas(
 
     return resultados
 
-## ==========================================================
-#  PRUEBAS
-## =========================================================
+
+# ==========================================================
+# EJECUCIÓN PRINCIPAL
+# ==========================================================
 
 if __name__ == "__main__":
 
