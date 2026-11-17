@@ -5,7 +5,7 @@ from dic_financial_terms import CONCEPTOS_FINANCIEROS
 
 
 # ==========================================================
-# 3. CONSULTAR EMPRESAS
+# 1. CONSULTAR EMPRESAS
 # ==========================================================
 
 def listar_empresas():
@@ -29,7 +29,7 @@ def listar_empresas():
 
 
 # ==========================================================
-# 4. EXPLORAR DATOS FINANCIEROS
+# 2. EXPLORAR DATOS FINANCIEROS
 # ==========================================================
 
 def explorar_datos_empresa(ticker, limite=20):
@@ -85,22 +85,28 @@ def explorar_datos_empresa(ticker, limite=20):
 
 
 # ==========================================================
-# 5. BUSCAR CONCEPTOS CONTABLES
+# 3. BUSCAR CONCEPTOS CONTABLES
 # ==========================================================
 
-def listar_conceptos_por_palabra(ticker, palabra, limite=50):
 
+def listar_conceptos_por_palabra(
+    ticker,
+    palabra,
+    limite=50,
+    taxonomy=None
+):
     """
-    Busca conceptos contables que contengan una palabra.
+    Busca conceptos contables por nombre técnico o etiqueta.
 
-    Ejemplo:
-    listar_conceptos_por_palabra("MSFT", "Revenue")
+    Si taxonomy es None, busca en todas las taxonomías.
+    Si se indica una taxonomía, limita la búsqueda a ella.
     """
 
     with obtener_conexion() as conexion:
 
         consulta = """
             SELECT
+                f.taxonomy,
                 f.concept,
                 d.label,
                 f.unit,
@@ -114,23 +120,41 @@ def listar_conceptos_por_palabra(ticker, palabra, limite=50):
                 AND f.concept = d.concept
 
             WHERE f.ticker = ?
-                AND f.taxonomy = 'us-gaap'
                 AND f.form IN ('10-K', '10-Q')
-                AND f.concept LIKE ?
+                AND (
+                    f.concept LIKE ?
+                    OR d.label LIKE ?
+                )
+        """
 
+        parametros = [
+            ticker.upper(),
+            f"%{palabra}%",
+            f"%{palabra}%"
+        ]
+
+        if taxonomy is not None:
+            consulta += " AND f.taxonomy = ?"
+            parametros.append(taxonomy)
+
+        consulta += """
             GROUP BY
+                f.taxonomy,
                 f.concept,
                 d.label,
                 f.unit
 
-            ORDER BY ultima_publicacion DESC
+            ORDER BY
+                ultima_publicacion DESC
 
             LIMIT ?
         """
 
+        parametros.append(limite)
+
         resultado = conexion.execute(
             consulta,
-            (ticker.upper(), f"%{palabra}%", limite)
+            parametros
         )
 
         registros = resultado.fetchall()
@@ -139,8 +163,9 @@ def listar_conceptos_por_palabra(ticker, palabra, limite=50):
 
 
 
+
 # ==========================================================
-# 7. CONSULTAR OBSERVACIONES DE UN CONCEPTO SEC
+# 4. CONSULTAR OBSERVACIONES DE UN CONCEPTO SEC
 # ==========================================================
 
 def obtener_observaciones_concepto(
@@ -208,7 +233,7 @@ def obtener_observaciones_concepto(
 
 
 # ==========================================================
-# 9. OBTENER OBSERVACIONES DE PERIODOS ANUALES
+# 5. OBTENER OBSERVACIONES DE PERIODOS ANUALES
 # ==========================================================
 
 def obtener_observaciones_anuales(ticker, concepto, limite=30):
@@ -279,7 +304,7 @@ def obtener_observaciones_anuales(ticker, concepto, limite=30):
 
 
 # ==========================================================
-# 11. OBTENER UN DATO ANUAL EN UNA FECHA DETERMINADA
+# 6. OBTENER UN DATO ANUAL EN UNA FECHA DETERMINADA
 # ==========================================================
 
 def obtener_dato_anual(
@@ -384,7 +409,7 @@ def obtener_dato_anual(
 
 
 # ==========================================================
-# 12. OBTENER INGRESOS ANUALES
+# 7. OBTENER INGRESOS ANUALES
 # ==========================================================
 
 def obtener_ingresos(ticker, ejercicio, fecha_corte):
@@ -448,5 +473,53 @@ def obtener_ingresos(ticker, ejercicio, fecha_corte):
         return resultado
 
     return None
+
+
+# ==========================================================
+# Prueba de obtener dato anual para una empresa y concepto específico
+# ==========================================================
+
+if __name__ == "__main__":
+
+    palabras = [
+        "ServiceCost",
+        "InterestCost",
+        "ExpectedReturnOnPlanAssets",
+        "RecognizedNetGainLoss",
+        "Settlement",
+        "Curtailment"
+    ]
+
+    for palabra in palabras:
+
+        print("\n" + "=" * 90)
+        print(f"BÚSQUEDA: {palabra}")
+        print("=" * 90)
+
+        resultados = listar_conceptos_por_palabra(
+            ticker="CVX",
+            palabra=palabra,
+            limite=100
+        )
+
+        for resultado in resultados:
+            print(
+                resultado["concept"],
+                "|",
+                resultado["label"],
+                "|",
+                resultado["unit"],
+                "| Registros:",
+                resultado["numero_registros"],
+                "| Última publicación:",
+                resultado["ultima_publicacion"]
+            )
+
+
+
+
+
+
+
 
 
