@@ -1,3 +1,14 @@
+"""
+Diccionario de conceptos SEC utilizados para construir EBIT.
+
+Cada empresa puede tener diferentes conceptos contables
+y distintas alternativas de cálculo.
+
+Este archivo identifica los conceptos disponibles.
+No define todavía las reglas matemáticas del cálculo.
+"""
+
+
 
 EBIT_CONCEPTS = {
     "NKE": {

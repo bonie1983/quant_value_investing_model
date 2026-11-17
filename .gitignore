@@ -1,32 +1,26 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
 
-# ==========================================================
-# CREDENCIALES Y VARIABLES DE ENTORNO
-# ==========================================================
-.env
-.env.*
-
-# ==========================================================
-# BASE DE DATOS Y CACHÉ DE DATOS
-# ==========================================================
-database/
-data_cache/
-
-# ==========================================================
-# ENTORNOS VIRTUALES
-# ==========================================================
+# Virtual environments
 .venv/
 venv/
 
-# ==========================================================
-# PYTHON
-# ==========================================================
-__pycache__/
-*.py[cod]
-.pytest_cache/
+# SQLite database
+database/
 
-# ==========================================================
-# SISTEMA Y EDITORES
-# ==========================================================
+# SEC cache
+data_cache/
+
+# Environment variables
+.env
+.env.*
+
+# macOS
 .DS_Store
-.vscode/
 
+# Testing and coverage
+.pytest_cache/
+.coverage
+htmlcov/
